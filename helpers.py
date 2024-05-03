@@ -95,10 +95,18 @@ def calculate_loss(predicted, truth, output_size):
     mse_loss = torch.mean((predicted - truth_resized) ** 2)
     return mse_loss
 
+
+def loss(predicted_colors, true_colors, predicted_class, true_class):
+    colorization_loss = calculate_loss(predicted_colors, true_colors, (256, 256)) 
+    classification_loss = torch.nn.CrossEntropyLoss(predicted_class, true_class)
+    # Loss should be colorization - (alpha*classification)
+
+
 # Example usage
 resizeEntireDataset('data')
 target = convert_to_lab_and_normalize('rescaled/train/Cinema/fujifilm_x_t4_43.png')
 predicted = convert_to_lab_and_normalize('rescaled/train/Cinema/fujifilm_x_t4_43.png')
 loss = calculate_loss(predicted, target, (224, 224)) #loss should be zero since predicted and target are the same
 print("Loss:", loss)
+
 
