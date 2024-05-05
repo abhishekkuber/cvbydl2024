@@ -5,3 +5,4 @@ Things to do:
 3. Create the training loop
 4. Do random crops and rotations to training images
 5. Batch normalizations
+6. Change batch size

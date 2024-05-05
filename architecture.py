@@ -167,7 +167,7 @@ class FullNetwork(nn.Module):
         super(FullNetwork, self).__init__()
         
         self.sllf = SLLF()
-        self.gif = GIF()
+        self.glf = GIF()
         self.mlf = MLF()
         self.colorizationNetwork = ColorizationNetwork()
         self.classificationNetwork = ClassificationNetwork()
@@ -179,6 +179,7 @@ class FullNetwork(nn.Module):
     #     return fused
     
     def forward(self, x):
+
         llf = self.sllf.forward(x)
 
         mlf = self.mlf.forward(llf)
@@ -186,7 +187,8 @@ class FullNetwork(nn.Module):
         
         # Fusion
         glf = glf.unsqueeze(-1).unsqueeze(-1)
-        glf = glf.expand(256, 28, 28)
+        print(f"MLF shape:{mlf.shape} , GLF shape: {glf.shape}")
+        glf = glf.expand(1, 256, 28, 28) 
         fused = torch.cat((mlf, glf), 0)
 
         # Classification Network
@@ -194,5 +196,6 @@ class FullNetwork(nn.Module):
 
         # Colorization Network
         predicted_colors = self.colorizationNetwork.forward(fused)
+        print(f"PREDICTED COLORS : {predicted_colors.shape}")
 
         return predicted_class, predicted_colors

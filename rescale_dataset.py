@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-def rescale(input_image_path, height=224, width=224):
+def rescale(input_image_path, height=256, width=256):
     with Image.open(input_image_path) as img:
         return img.resize((width, height))
 
@@ -74,7 +74,8 @@ def calculate_loss(predicted, truth, output_size):
 #     return colorization_loss - alpha * classification_loss
 
 def loss(predicted_colors, true_colors):
-    colorization_loss = calculate_loss(predicted_colors, true_colors, (256, 256))
+    print(predicted_colors.shape, true_colors.shape)
+    colorization_loss = calculate_loss(predicted_colors, true_colors, (224, 224))
     return colorization_loss
 
 

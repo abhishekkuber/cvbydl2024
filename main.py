@@ -14,8 +14,8 @@ def main():
 
     print("test set at 0 has shapes \n INPUT", test_set[0][0].shape, "\n GROUND TRUTH:",test_set[0][1].shape)
 
-    train_loader = DataLoader(dataset=train_set, batch_size=32, shuffle=True)
-    test_loader = DataLoader(dataset=test_set, batch_size=32, shuffle=True)
+    train_loader = DataLoader(dataset=train_set, batch_size=1, shuffle=True)
+    test_loader = DataLoader(dataset=test_set, batch_size=1, shuffle=True)
 
     # Training parameters
     epochs = 3
@@ -48,6 +48,7 @@ def main():
             optimizer.zero_grad()
 
             # Perform forward pass, y_pred now contains the predicted class and the predicted colors
+            x_batch = x_batch.to(torch.float32)
             y_pred = network(x_batch)
 
             # Compute the loss
