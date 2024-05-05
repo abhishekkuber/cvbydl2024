@@ -161,6 +161,22 @@ class ClassificationNetwork(nn.Module):
         x = self.relu(self.fc2(x)) # DO WE NEED RELU HERE?
         return x 
 
+class FusionLayer(nn.Module):
+    def __init__(self):
+        super(FusionLayer, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels=512, out_channels=256, kernel_size=3, stride=1, padding=1) # 28x28 -> 28x28
+        self.relu = nn.ReLU()
+    
+    def forward(self, glf, mlf):
+        glf = glf.unsqueeze(-1).unsqueeze(-1)
+        glf = glf.expand(1, 256, 28, 28)
+
+        fused = torch.cat((mlf, glf), 1)
+        fused = self.relu(self.conv1(fused))
+        return fused
+    
+
+
 
 class FullNetwork(nn.Module):
     def __init__(self):
@@ -169,8 +185,10 @@ class FullNetwork(nn.Module):
         self.sllf = SLLF()
         self.glf = GIF()
         self.mlf = MLF()
+        self.fusionLayer = FusionLayer()
         self.colorizationNetwork = ColorizationNetwork()
         self.classificationNetwork = ClassificationNetwork()
+        
 
     # def fusion(self, glf, mlf):
     #     glf = glf.unsqueeze(-1).unsqueeze(-1)
@@ -186,10 +204,7 @@ class FullNetwork(nn.Module):
         cn_output, glf = self.glf.forward(llf)
         
         # Fusion
-        glf = glf.unsqueeze(-1).unsqueeze(-1)
-        print(f"MLF shape:{mlf.shape} , GLF shape: {glf.shape}")
-        glf = glf.expand(1, 256, 28, 28) 
-        fused = torch.cat((mlf, glf), 0)
+        fused = self.fusionLayer.forward(glf, mlf)
 
         # Classification Network
         predicted_class = self.classificationNetwork.forward(cn_output)
@@ -197,5 +212,6 @@ class FullNetwork(nn.Module):
         # Colorization Network
         predicted_colors = self.colorizationNetwork.forward(fused)
         print(f"PREDICTED COLORS : {predicted_colors.shape}")
+        
 
         return predicted_class, predicted_colors
