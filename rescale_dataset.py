@@ -65,11 +65,17 @@ def calculate_loss(predicted, truth, output_size):
     mse_loss = torch.mean((predicted - truth_resized) ** 2)
     return mse_loss
 
+# TODO what do we want to do with the classification? remove everything right?
+# def loss(predicted_colors, true_colors, predicted_class, true_class):
+#     colorization_loss = calculate_loss(predicted_colors, true_colors, (256, 256))
+#     classification_loss = torch.nn.CrossEntropyLoss(predicted_class, true_class)
+#     # Loss should be colorization - (alpha*classification)
+#     alpha = 0
+#     return colorization_loss - alpha * classification_loss
 
-def loss(predicted_colors, true_colors, predicted_class, true_class):
-    colorization_loss = calculate_loss(predicted_colors, true_colors, (256, 256)) 
-    classification_loss = torch.nn.CrossEntropyLoss(predicted_class, true_class)
-    # Loss should be colorization - (alpha*classification)
+def loss(predicted_colors, true_colors):
+    colorization_loss = calculate_loss(predicted_colors, true_colors, (256, 256))
+    return colorization_loss
 
 
 # Example usage

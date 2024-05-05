@@ -3,3 +3,5 @@ Things to do:
 1. Create function for dataloaders
 2. Create the loss function (MSE - alpha * classification loss(CrossEntropy))
 3. Create the training loop
+4. Do random crops and rotations to training images
+5. Batch normalizations
