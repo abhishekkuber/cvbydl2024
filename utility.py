@@ -22,8 +22,11 @@ def evaluate_accuracy(data_loader, net, device=torch.device('cpu')):
     for X, y in data_loader:
         # Copy the data to device.
         X, y = X.to(device), y.to(device)
+        X = X.float()
+        y = y.float()
+
         with torch.no_grad():
-            y = y.long()
+            # y = y.long()
             acc_sum += torch.sum((torch.argmax(net(X)[1], dim=1) == y))
             n += y.shape[0] #increases with the number of samples in the batch
     return acc_sum.item()/n

@@ -12,7 +12,7 @@ def main():
     train_set = FilmPicturesDataset(TRAIN_DIR)
     test_set = FilmPicturesDataset(TEST_DIR)
 
-    print("test set at 0 has shapes \n INPUT", test_set[0][0].shape, "\n GROUND TRUTH:",test_set[0][1].shape)
+    # print("test set at 0 has shapes \n INPUT", test_set[0][0].shape, "\n GROUND TRUTH:",test_set[0][1].shape)
 
     train_loader = DataLoader(dataset=train_set, batch_size=1, shuffle=True)
     test_loader = DataLoader(dataset=test_set, batch_size=1, shuffle=True)
@@ -48,8 +48,11 @@ def main():
             optimizer.zero_grad()
 
             # Perform forward pass, y_pred now contains the predicted class and the predicted colors
-            x_batch = x_batch.to(torch.float32)
+            x_batch = x_batch.float()
+            y_batch = y_batch.float()
+
             y_pred = network(x_batch)
+
 
             # Compute the loss
             loss = criterion(y_pred[1], y_batch)
@@ -59,7 +62,8 @@ def main():
             loss.backward()
             optimizer.step()
 
-        # Compute train and test error
+        
+        # Why is this calculating for training losses again?
         train_acc = 100 * evaluate_accuracy(train_loader, network.to('cpu'))
         test_acc = 100 * evaluate_accuracy(test_loader, network.to('cpu'))
 

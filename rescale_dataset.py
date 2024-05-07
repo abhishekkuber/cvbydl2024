@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-def rescale(input_image_path, height=256, width=256):
+def rescale(input_image_path, height=224, width=224):
     with Image.open(input_image_path) as img:
         return img.resize((width, height))
 
@@ -60,9 +60,11 @@ def calculate_loss(predicted, truth, output_size):
     """
     #resize truth to match size of predicted
     #use align_corners=False to avoid artifacts in the rescaling process
-    truth_resized = F.interpolate(truth.unsqueeze(0), size=output_size, mode='bilinear', align_corners=False).squeeze(0)
-
-    mse_loss = torch.mean((predicted - truth_resized) ** 2)
+    
+    '''truth_resized = F.interpolate(truth.unsqueeze(0), size=output_size, mode='bilinear', align_corners=False).squeeze(0)
+    mse_loss = torch.mean((predicted - truth_resized) ** 2)'''
+    
+    mse_loss = torch.mean((predicted - truth) ** 2)
     return mse_loss
 
 # TODO what do we want to do with the classification? remove everything right?
@@ -74,7 +76,6 @@ def calculate_loss(predicted, truth, output_size):
 #     return colorization_loss - alpha * classification_loss
 
 def loss(predicted_colors, true_colors):
-    print(predicted_colors.shape, true_colors.shape)
     colorization_loss = calculate_loss(predicted_colors, true_colors, (224, 224))
     return colorization_loss
 
