@@ -45,14 +45,14 @@ def resizeEntireDataset(dataset_directory, output_directory='rescaled'):
     print(f"Resizing done. Resized {total_images_processed} images into folder '{output_directory}'.")
 
 
-def calculate_loss(predicted, truth, output_size):
+def calculate_loss(predicted, truth):
     """
     Calculates the mean square error loss between the predicted a*b* components from the colorization network
     and the scaled truth a*b* components.
 
     Parameters:
-        predicted (torch.Tensor): The predicted a*b* components output from the colorization network.
-        truth (torch.Tensor): The ground truth a*b* components of the target image.
+        predicted (torch.Tensor): The predicted a*b* components of size (batch_size, 2, height, width).
+        truth (torch.Tensor): The ground truth a*b* components of the target image of size (batch_size, 2, height, width).
         output_size (tuple): The desired output size as (height, width) to which the truth tensor should be resized.
 
     Returns:
@@ -60,19 +60,31 @@ def calculate_loss(predicted, truth, output_size):
     """
     #resize truth to match size of predicted
     #use align_corners=False to avoid artifacts in the rescaling process
-    truth_resized = F.interpolate(truth.unsqueeze(0), size=output_size, mode='bilinear', align_corners=False).squeeze(0)
+    
+    '''truth_resized = F.interpolate(truth.unsqueeze(0), size=output_size, mode='bilinear', align_corners=False).squeeze(0)
+    mse_loss = torch.mean((predicted - truth_resized) ** 2)'''
 
-    mse_loss = torch.mean((predicted - truth_resized) ** 2)
+    assert predicted.shape == truth.shape
+    # mse_loss = torch.mean((predicted - truth) ** 2)
+    mseloss = torch.nn.MSELoss(reduction='sum')
+    mse_loss = mseloss(predicted, truth)
+    print("predicted",predicted[0,0,45,45].item(), "truth", truth[0,0,45,45].item(), "loss", mse_loss.item())
     return mse_loss
 
+# TODO what do we want to do with the classification? remove everything right?
+# def loss(predicted_colors, true_colors, predicted_class, true_class):
+#     colorization_loss = calculate_loss(predicted_colors, true_colors, (256, 256))
+#     classification_loss = torch.nn.CrossEntropyLoss(predicted_class, true_class)
+#     # Loss should be colorization - (alpha*classification)
+#     alpha = 0
+#     return colorization_loss - alpha * classification_loss
 
-def loss(predicted_colors, true_colors, predicted_class, true_class):
-    colorization_loss = calculate_loss(predicted_colors, true_colors, (256, 256)) 
-    classification_loss = torch.nn.CrossEntropyLoss(predicted_class, true_class)
-    # Loss should be colorization - (alpha*classification)
+def loss(predicted_colors, true_colors):
+    colorization_loss = calculate_loss(predicted_colors, true_colors)
+    return colorization_loss
 
 
 # Example usage
-resizeEntireDataset('data')
+# resizeEntireDataset('data')
 
 

@@ -112,6 +112,7 @@ class ColorizationNetwork(nn.Module):
         self.conv4 = nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, stride=1, padding=1) # 112x112 -> 112x112
         self.conv5 = nn.Conv2d(in_channels=32, out_channels=2, kernel_size=3, stride=1, padding=1) # 112x112 -> 112x112
 
+        
         self.upsample1 = nn.Upsample(scale_factor=2, mode='nearest')
         self.upsample2 = nn.Upsample(scale_factor=2, mode='nearest')
         self.upsample3 = nn.Upsample(scale_factor=2, mode='nearest') # Used after the sigmoid layer
@@ -124,16 +125,19 @@ class ColorizationNetwork(nn.Module):
     # Vector is of dimensions 256x28x28
     def forward(self, x):
         x = self.relu(self.conv1(x))
-        x = self.upsample1(x)
+        # x = self.upsample1(x)
+        x = nn.functional.interpolate(input=x, scale_factor=2)
         x = self.relu(self.conv2(x))
         x = self.relu(self.conv3(x))
-        x = self.upsample2(x)
+        x = nn.functional.interpolate(input=x, scale_factor=2)
+        # x = self.upsample2(x)
         x = self.relu(self.conv4(x))
         # Output layer
         x = self.sigmoid(self.conv5(x))
         
         # Upsampling here?
-        x = self.upsample3(x)
+        x = nn.functional.interpolate(input=x, scale_factor=2)
+        # x = self.upsample3(x)
 
         return x
     
@@ -161,16 +165,37 @@ class ClassificationNetwork(nn.Module):
         x = self.relu(self.fc2(x)) # DO WE NEED RELU HERE?
         return x 
 
+class FusionLayer(nn.Module):
+    def __init__(self):
+        super(FusionLayer, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels=512, out_channels=256, kernel_size=3, stride=1, padding=1) # 28x28 -> 28x28
+        self.relu = nn.ReLU()
+    
+    def forward(self, glf, mlf):
+        batch_size = glf.shape[0]
+        glf = glf.unsqueeze(-1).unsqueeze(-1)
+        glf = glf.expand(batch_size, 256, 28, 28)
+        
+        fused = torch.cat((mlf, glf), 1)
+        fused = self.relu(self.conv1(fused))
+
+
+        return fused
+    
+
+
 
 class FullNetwork(nn.Module):
     def __init__(self):
         super(FullNetwork, self).__init__()
         
         self.sllf = SLLF()
-        self.gif = GIF()
+        self.glf = GIF()
         self.mlf = MLF()
+        self.fusionLayer = FusionLayer()
         self.colorizationNetwork = ColorizationNetwork()
         self.classificationNetwork = ClassificationNetwork()
+        
 
     # def fusion(self, glf, mlf):
     #     glf = glf.unsqueeze(-1).unsqueeze(-1)
@@ -179,15 +204,14 @@ class FullNetwork(nn.Module):
     #     return fused
     
     def forward(self, x):
+
         llf = self.sllf.forward(x)
 
         mlf = self.mlf.forward(llf)
         cn_output, glf = self.glf.forward(llf)
         
         # Fusion
-        glf = glf.unsqueeze(-1).unsqueeze(-1)
-        glf = glf.expand(256, 28, 28)
-        fused = torch.cat((mlf, glf), 0)
+        fused = self.fusionLayer.forward(glf, mlf)
 
         # Classification Network
         predicted_class = self.classificationNetwork.forward(cn_output)
