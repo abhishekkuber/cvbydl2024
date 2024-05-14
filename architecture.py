@@ -112,6 +112,7 @@ class ColorizationNetwork(nn.Module):
         self.conv4 = nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, stride=1, padding=1) # 112x112 -> 112x112
         self.conv5 = nn.Conv2d(in_channels=32, out_channels=2, kernel_size=3, stride=1, padding=1) # 112x112 -> 112x112
 
+        
         self.upsample1 = nn.Upsample(scale_factor=2, mode='nearest')
         self.upsample2 = nn.Upsample(scale_factor=2, mode='nearest')
         self.upsample3 = nn.Upsample(scale_factor=2, mode='nearest') # Used after the sigmoid layer
@@ -124,16 +125,19 @@ class ColorizationNetwork(nn.Module):
     # Vector is of dimensions 256x28x28
     def forward(self, x):
         x = self.relu(self.conv1(x))
-        x = self.upsample1(x)
+        # x = self.upsample1(x)
+        x = nn.functional.interpolate(input=x, scale_factor=2)
         x = self.relu(self.conv2(x))
         x = self.relu(self.conv3(x))
-        x = self.upsample2(x)
+        x = nn.functional.interpolate(input=x, scale_factor=2)
+        # x = self.upsample2(x)
         x = self.relu(self.conv4(x))
         # Output layer
         x = self.sigmoid(self.conv5(x))
         
         # Upsampling here?
-        x = self.upsample3(x)
+        x = nn.functional.interpolate(input=x, scale_factor=2)
+        # x = self.upsample3(x)
 
         return x
     
@@ -168,11 +172,14 @@ class FusionLayer(nn.Module):
         self.relu = nn.ReLU()
     
     def forward(self, glf, mlf):
+        batch_size = glf.shape[0]
         glf = glf.unsqueeze(-1).unsqueeze(-1)
-        glf = glf.expand(1, 256, 28, 28)
-
+        glf = glf.expand(batch_size, 256, 28, 28)
+        
         fused = torch.cat((mlf, glf), 1)
         fused = self.relu(self.conv1(fused))
+
+
         return fused
     
 
@@ -211,7 +218,5 @@ class FullNetwork(nn.Module):
 
         # Colorization Network
         predicted_colors = self.colorizationNetwork.forward(fused)
-        print(f"PREDICTED COLORS : {predicted_colors.shape}")
-        
 
         return predicted_class, predicted_colors
