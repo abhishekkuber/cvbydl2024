@@ -27,7 +27,7 @@ class SLLF(nn.Module):
         self.conv5 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=2, padding=1) # 56x56 -> 28x28
         self.conv6 = nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=1) # 28x28 -> 28x28
 
-        self.relu = nn.ReLU()
+        self.relu = nn.Sigmoid()
 
     def forward(self, x):
         x = self.relu(self.conv1(x))
@@ -56,7 +56,7 @@ class GIF(nn.Module):
         self.fc2 = nn.Linear(in_features=1024, out_features=512)
         self.fc3 = nn.Linear(in_features=512, out_features=256)
 
-        self.relu = nn.ReLU()
+        self.relu = nn.Sigmoid()
 
     def forward(self, x):
         x = self.relu(self.conv1(x))
@@ -92,7 +92,7 @@ class MLF(nn.Module):
         self.conv1 = nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=1, padding=1) # 28x28 -> 28x28
         self.conv2 = nn.Conv2d(in_channels=512, out_channels=256, kernel_size=3, stride=1, padding=1) # 28x28 -> 28x28
         
-        self.relu = nn.ReLU()
+        self.relu = nn.Sigmoid()
     
     def forward(self, x):
         x = self.relu(self.conv1(x))
@@ -117,7 +117,7 @@ class ColorizationNetwork(nn.Module):
         self.upsample2 = nn.Upsample(scale_factor=2, mode='nearest')
         self.upsample3 = nn.Upsample(scale_factor=2, mode='nearest') # Used after the sigmoid layer
         
-        self.relu = nn.ReLU()
+        self.relu = nn.Sigmoid()
         self.sigmoid = nn.Sigmoid()
         
 
@@ -158,7 +158,7 @@ class ClassificationNetwork(nn.Module):
         self.fc1 = nn.Linear(in_features=512, out_features=256)
         self.fc2 = nn.Linear(in_features=256, out_features=3) # 4 classes : Cinema, ClassNeg, Velvia
 
-        self.relu = nn.ReLU()
+        self.relu = nn.Sigmoid()
     
     def forward(self, x):
         x = self.relu(self.fc1(x))
@@ -169,20 +169,26 @@ class FusionLayer(nn.Module):
     def __init__(self):
         super(FusionLayer, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=512, out_channels=256, kernel_size=3, stride=1, padding=1) # 28x28 -> 28x28
-        self.relu = nn.ReLU()
+        self.relu = nn.Sigmoid()
     
     def forward(self, glf, mlf):
+        # Mid Out : torch.Size([2, 256, 28, 28]), Glob Out : torch.Size([2, 256])
+        # glob_stack3d : torch.Size([2, 256, 28, 28])
+        # stack_volume : torch.Size([2, 512, 28, 28])
+
+        
+
         batch_size = glf.shape[0]
         glf = glf.unsqueeze(-1).unsqueeze(-1)
         glf = glf.expand(batch_size, 256, 28, 28)
-        
+
         fused = torch.cat((mlf, glf), 1)
+
         fused = self.relu(self.conv1(fused))
 
 
         return fused
     
-
 
 
 class FullNetwork(nn.Module):
@@ -194,29 +200,25 @@ class FullNetwork(nn.Module):
         self.mlf = MLF()
         self.fusionLayer = FusionLayer()
         self.colorizationNetwork = ColorizationNetwork()
-        self.classificationNetwork = ClassificationNetwork()
-        
+        # self.classificationNetwork = ClassificationNetwork()
 
-    # def fusion(self, glf, mlf):
-    #     glf = glf.unsqueeze(-1).unsqueeze(-1)
-    #     glf = glf.expand(256, 28, 28)
-    #     fused = torch.cat((mlf, glf), 0)
-    #     return fused
-    
+
     def forward(self, x):
 
         llf = self.sllf.forward(x)
 
         mlf = self.mlf.forward(llf)
-        cn_output, glf = self.glf.forward(llf)
+        # cn_output, glf = self.glf.forward(llf)
+        _, glf = self.glf.forward(llf)
         
         # Fusion
         fused = self.fusionLayer.forward(glf, mlf)
-
+        
         # Classification Network
-        predicted_class = self.classificationNetwork.forward(cn_output)
+        # predicted_class = self.classificationNetwork.forward(cn_output)
 
         # Colorization Network
         predicted_colors = self.colorizationNetwork.forward(fused)
 
-        return predicted_class, predicted_colors
+        # return predicted_colors, predicted_class
+        return predicted_colors

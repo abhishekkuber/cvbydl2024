@@ -50,33 +50,17 @@ def save_rgb_image(rgb_tensor, epoch, batch_idx, save_dir='output_images'):
     :param save_dir: str, directory to save images
     :return: str, path to saved image
     """
-    # print("rgb_tensor.shape", rgb_tensor.shape)
     # Create directory if it doesn't exist
     os.makedirs(save_dir, exist_ok=True)
 
-    # Convert tensor to numpy array and then to image
-    # rgb_array = rgb_tensor.cpu().detach().numpy()
-    for i, rgb_array in enumerate(rgb_tensor):
-        rgb_array = (rgb_array * 255).astype('uint8')  # Assuming RGB values are in [0, 1] range
-        rgb_array = np.transpose(rgb_array, (1,2,0))
-        # print("Saving R Range - Max:", np.max(rgb_array[:, :, 0]), np.min(rgb_array[:, :, 0]))
-        # print("Saving G Range - Max:", np.max(rgb_array[:, :, 1]), np.min(rgb_array[:, :, 1]))
-        # print("Saving B Range - Max:", np.max(rgb_array[:, :, 2]), np.min(rgb_array[:, :, 2]))
-        # if (i==0):
-        #     print(rgb_array.shape)
-        #     print("10 red pixels",rgb_array[:, :, 0][0, :10])
-        #     print("10 green pixels",rgb_array[:, :, 1][0, :10])
-
-        # Save the image
-        image_path = os.path.join(save_dir, f'epoch_{epoch}_batch_{batch_idx}_img_{i}_c.png')
+    image_path = os.path.join(save_dir, f'batch_{epoch}_img{batch_idx}.png')
     
-        cv2.imwrite(image_path, rgb_array)
-        # im = Image.fromarray(rgb_array, mode="RGB")
-        # im.save(image_path)
-
-        # io.imsave(image_path, rgb_array)
+    # (224, 224, 3)
+    # Is in the range 0-1
+    rgb_tensor *= 255.0
+    rgb_tensor = rgb_tensor.astype(np.uint8)
     
-
+    # cv2.imwrite(image_path, rgb_tensor)
     
-
-    return image_path
+    io.imsave(image_path, rgb_tensor)
+    

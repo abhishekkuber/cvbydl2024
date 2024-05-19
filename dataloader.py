@@ -6,6 +6,8 @@ import torch
 from torch.utils.data import Dataset
 import matplotlib.pyplot as plt
 from skimage.color import lab2rgb, rgb2lab
+from skimage.transform import resize
+from skimage import io
 
 
 
@@ -16,9 +18,11 @@ class FilmPicturesDataset(Dataset):
 
     def make_dataset(self):
         images = []
+        valid_extensions = ('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff')
         for img_name in os.listdir(self.root_dir):
-            img_path = os.path.join(self.root_dir, img_name)
-            images.append(img_path)
+            if img_name.endswith(valid_extensions):
+                img_path = os.path.join(self.root_dir, img_name)
+                images.append(img_path)
         return images
 
     def __len__(self):
@@ -27,16 +31,14 @@ class FilmPicturesDataset(Dataset):
     def __getitem__(self, idx):
         img_path = self.imgs[idx]
         
-        input_greyscale = convert_to_grayscale(img_path)
-        # print("input_greyscale shape: ", input_greyscale.shape)
+        # input_greyscale = convert_to_grayscale(img_path)
         l, ground_truth_a_b = convert_to_lab_and_normalize(img_path) 
-        # print("ground_truth_a_b shape: ", ground_truth_a_b.shape)
-        return input_greyscale, ground_truth_a_b, l
+        return l, ground_truth_a_b
     
-    def get_luminance(self, idx):
-        img_path = self.imgs[idx]
-        l, _ = convert_to_lab_and_normalize(img_path) 
-        return l
+    # def get_luminance(self, idx):
+    #     img_path = self.imgs[idx]
+    #     l, _ = convert_to_lab_and_normalize(img_path) 
+    #     return l
 
 
 def convert_to_grayscale(image_path):
@@ -52,74 +54,51 @@ def convert_to_lab_and_normalize(image_path):
     returns: luminance, a numpy array of shape (224, 224)
              ab, a tensor of shape (2, 224, 224)
     """
-    img = cv2.imread(image_path)
-    
-    
-    # print("Original R Range - Max:", np.max(img[0]), np.min(img[0]))
-    # print("Original G Range - Max:", np.max(img[1]), np.min(img[1]))
-    # print("Original B Range - Max:", np.max(img[2]), np.min(img[2]))
+    # img = cv2.imread(image_path)
 
+    # (224, 224, 3) <class 'numpy.ndarray'>
 
+    img = io.imread(image_path)
+    img = resize(img, (224, 224))
+
+    # (224, 224, 3) <class 'numpy.ndarray'>
     img_lab = rgb2lab(img)
-    # print("Original LUMINANCE Range - Max:", np.max(img_lab[:, :, :1]), "Min:", np.min(img_lab[:, :, :1]))
-    # print("Original AB Range - Max:", np.max(img_lab[:, :, 1:]), "Min:", np.min(img_lab[:, :, 1:]))
-
     
-    img_lab[:,:,:1] = img_lab[:,:,:1] / 100.0
-    img_lab[:,:,1:] = (img_lab[:,:,1:] + 128.0) / 256.0 # shape (224, 224, 3)
+    # LAB range L: 0-100, a: -127-128, b: -128-127.
+    img_lab[:,:,:1] = img_lab[:, :, :1] / 100.0 
+    img_lab[:,:,1:] = (img_lab[:, :, 1:] + 128.0) / 256.0 
+    
+    # (224, 224, 3) <class 'numpy.ndarray'>
 
+    img_lab = np.transpose(img_lab, (2,0,1)).astype(np.float32) 
+    img_lab = torch.from_numpy(img_lab)
+    # shape (3, 224, 224), torch.Tensor
 
-    img_lab = np.transpose(img_lab, (2,0,1)) # shape (3, 224, 224)
-    luminance = img_lab[0]
-    ab = torch.from_numpy(img_lab[1:])
-    # print("Normalized AB Range - Max:", torch.max(ab), "Min:", torch.min(ab))
+    luminance = img_lab[:1,:,:] # Use [:1] instead of [0] because [0] disregards the first dimension. Luminance goes from 3D to 2D
+    ab = img_lab[1:,:,:]
+
     return luminance, ab
 
-def lab_to_rgb(l, ab):
+def lab_to_rgb(img_l, img_ab):
     """
     l: tensor of shape (batch_size, 1, 224, 224)
     ab: tensor of shape (batch_size, 2, 224, 224)
     returns: list of RGB images
     """
-    # converted_images = []
-    
-    batch_size = l.shape[0]
-    
-    assert l.shape == (batch_size, 1, 224, 224), "Expected shape of l: (batch_size, 1, 224, 224)"
-    assert ab.shape == (batch_size, 2, 224, 224), "Expected shape of ab: (batch_size, 2, 224, 224)"
-  
-    l = l.numpy() * 100.0
-    ab = (ab.detach().numpy() * 256.0) - 128.0
-    
-    img_stack = np.concatenate((l, ab), axis=1)
+    # converted_images = []    
+    img_l = img_l.numpy() * 100.0
+    img_ab = (img_ab.numpy() * 255.0) - 128.0
 
-    # l = l.transpose((0, 2, 1, 3))
-    # ab = ab.transpose((0, 2, 1, 3))
+    # torch tensor of shape (batch_size, 3, 224, 224)
+    img_l = img_l.transpose((1, 2, 0))
+    img_ab = img_ab.transpose((1, 2, 0))
 
-    # # Now, L and AB are of shape : [batch x height x width x channel]
+# skimage requires the images to be of the shape (batch_size, height, width, channels)
+    img_stack = np.dstack((img_l, img_ab))
 
-    # img_stack = np.dstack((l, ab))
-
-    # img_stack = img_stack.transpose((0, 1, 3, 2))
-    
-    # print("First on image stack L Range - Max:", np.max(img_stack[0, :, :,0]), np.min(img_stack[0, :, :,0]))
-    # print("First on image stack A Range - Max:", np.max(img_stack[0, :, :,1]), np.min(img_stack[0, :, :,1]))
-    # print("First on image stack B Range - Max:", np.max(img_stack[0, :, :,2]), np.min(img_stack[0, :, :,2]))
-    
-    # This line is CRUCIALL
-    #   - torch requires tensors to be float32
-    #   - thus all above (L, ab) are float32
-    #   - scikit image floats are in range -1 to 1
-    #   - http://scikit-image.org/docs/dev/user_guide/data_types.html
-    #   - idk what's next, but converting image to float64 somehow
-    #     does the job. scikit automagically converts those values.
     img_stack = img_stack.astype(np.float64)
-    converted_images = lab2rgb(img_stack, channel_axis=1)
-    # print("Final R Range - Max:", np.max(converted_images[0,0]), np.min(converted_images[0,0]))
-    # print("Final G Range - Max:", np.max(converted_images[0,1]), np.min(converted_images[0,1]))
-    # print("Final B Range - Max:", np.max(converted_images[0,2]), np.min(converted_images[0,2]))
-    
-    return converted_images
+
+    return lab2rgb(img_stack)
 
 
 
