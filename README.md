@@ -1,17 +1,9 @@
-# cvbydl2024
+# CS4245 Seminar Computer Vision By Deep Learning
 
-## Setup
+Code for [reproduction](https://hackmd.io/L82_xZI4QA-QO7GojqPxeQ?view) of the paper "Let there be Color! Joint End-to-end Learning of Global and Local Image Priors for Automatic Image Colorization with Simultaneous Classification". 
 
-Create and activate a conda environment with the necessary dependencies.
-
-```
-conda create --name cvbydl --file requirements.txt
-
-conda activate cvbydl
-```
 
 ## Run
-
-1. Either use the [original dataset](https://arxiv.org/abs/2301.08880) and rescale it by running `python rescale_dataset.py` or directly download the [rescaled dataset]().
-2. In `main.py` specify the locations TRAIN_DIR and TEST_DIR.
-3. Run `python main.py`.
+1. Use the [original dataset](https://www.kaggle.com/datasets/xuhangc/filmset) and download it 
+2. For the original architecture, run ```main.ipynb```
+3. If you want to reduce the number of parameters like we have done in the blog, divide the number of channels for the convolution layers by powers of two. 
