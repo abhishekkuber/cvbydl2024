@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import torch
 import torch.nn.functional as F
+import json
 
 def rescale(input_image_path, height=224, width=224):
     with Image.open(input_image_path) as img:
